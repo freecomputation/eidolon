@@ -236,48 +236,58 @@ static void field_draw(EidolonApp* app, Canvas* canvas) {
     canvas_draw_dot(canvas, px, py);
     canvas_draw_disc(canvas, cx, cy, 2);
 
+    /* history strip, drawn early so the readouts and lamps below stay
+     * legible where tall ticks reach their rows */
+    for(uint8_t i = 0; i < FIELD_HISTORY; i++) {
+        float v = f->history[(f->hist_head + i) % FIELD_HISTORY];
+        int h = (int)(v * 7.0f / 100.0f);
+        int x = i * 2;
+        if(h > 0) canvas_draw_line(canvas, x, 63, x, 63 - h);
+    }
+
     /* state word + readouts on the right */
     canvas_set_font(canvas, FontPrimary);
     canvas_draw_str(canvas, 66, 22, field_level_name(f->level));
 
+    /* readouts, two lines in the 61 px right column: the old single
+     * lines ran to 89-100 px from x=66 and off the screen edge */
     canvas_set_font(canvas, FontSecondary);
+    char buf2[48];
     if(f->source == FieldSrcHall) {
-        snprintf(buf, sizeof(buf), "MAG %d  BASE %d", (int)f->hall_mag, (int)f->hall_base);
+        snprintf(buf, sizeof(buf), "MAG %d", (int)f->hall_mag);
+        snprintf(buf2, sizeof(buf2), "BASE %d", (int)f->hall_base);
     } else if(f->source == FieldSrcBand) {
         eidolon_fmt_1dp(num, sizeof(num), f->band_rssi);
         uint32_t mhz = f->band_freq_hz / 1000000;
         uint32_t khz = (f->band_freq_hz % 1000000) / 10000;
-        snprintf(buf, sizeof(buf), "%lu.%02luM %s dBm", (unsigned long)mhz, (unsigned long)khz, num);
+        snprintf(buf, sizeof(buf), "%lu.%02lu MHz", (unsigned long)mhz, (unsigned long)khz);
+        snprintf(buf2, sizeof(buf2), "%s dBm", num);
     } else {
         uint8_t best = 0;
         for(uint8_t i = 1; i < FIELD_SWEEP_STEPS; i++)
             if(f->rssi[i] > f->rssi[best]) best = i;
         eidolon_fmt_1dp(num, sizeof(num), f->rssi[best]);
-        snprintf(
-            buf,
-            sizeof(buf),
-            "%luM %s dBm",
-            (unsigned long)(field_sweep_freqs[best] / 1000000),
-            num);
+        snprintf(buf, sizeof(buf), "BEST %luM", (unsigned long)(field_sweep_freqs[best] / 1000000));
+        snprintf(buf2, sizeof(buf2), "%s dBm", num);
     }
     canvas_draw_str(canvas, 66, 32, buf);
-
-    /* level bar */
-    canvas_draw_frame(canvas, 66, 36, 60, 6);
-    int fill = (int)(f->level * 58.0f / 100.0f);
-    if(fill > 0) canvas_draw_box(canvas, 67, 37, fill, 4);
+    canvas_draw_str(canvas, 66, 41, buf2);
 
     snprintf(buf, sizeof(buf), "PK %d", (int)f->peak);
     canvas_draw_str(canvas, 66, 52, buf);
 
-    /* temperature + cold spot */
-    eidolon_fmt_1dp(num, sizeof(num), f->temp_now);
-    char tbuf[36];
-    char dbuf[12];
-    eidolon_fmt_1dp(dbuf, sizeof(dbuf), f->temp_now - f->temp_start);
-    snprintf(tbuf, sizeof(tbuf), "T %sC %s", num, dbuf);
-    canvas_draw_str(canvas, 96, 52, tbuf);
-    if(f->cold_active) canvas_draw_str(canvas, 96, 44, "COLD SPOT");
+    /* temperature, or the cold-spot alert in its place */
+    if(f->cold_active) {
+        canvas_set_font(canvas, FontPrimary);
+        canvas_draw_str(canvas, 66, 61, "COLD SPOT");
+        canvas_set_font(canvas, FontSecondary);
+    } else {
+        eidolon_fmt_1dp(num, sizeof(num), f->temp_now);
+        char dbuf[12];
+        eidolon_fmt_1dp(dbuf, sizeof(dbuf), f->temp_now - f->temp_start);
+        snprintf(buf, sizeof(buf), "T %s %s", num, dbuf);
+        canvas_draw_str(canvas, 66, 61, buf);
+    }
 
     /* reader-field lamps */
     bool nfc_r = eidolon_fd.nfc_seen_tick && (furi_get_tick() - eidolon_fd.nfc_seen_tick) < 2000;
@@ -289,13 +299,6 @@ static void field_draw(EidolonApp* app, Canvas* canvas) {
     if(rfid_r) canvas_draw_disc(canvas, 58, 49, 3);
     else canvas_draw_circle(canvas, 58, 49, 3);
 
-    /* history strip */
-    for(uint8_t i = 0; i < FIELD_HISTORY; i++) {
-        float v = f->history[(f->hist_head + i) % FIELD_HISTORY];
-        int h = (int)(v * 7.0f / 100.0f);
-        int x = i * 2;
-        if(h > 0) canvas_draw_line(canvas, x, 63, x, 63 - h);
-    }
 }
 
 /* ---------------- input ---------------- */

@@ -141,8 +141,14 @@ static void box_draw(EidolonApp* app, Canvas* canvas) {
     canvas_set_font(canvas, FontPrimary);
     canvas_draw_str(canvas, 2, 10, "SPIRIT BOX");
     canvas_set_font(canvas, FontSecondary);
-    snprintf(buf, sizeof(buf), "%sM %lums", box_bands[b->band].name, (unsigned long)b->dwell_ms);
-    canvas_draw_str_aligned(canvas, 127, 9, AlignRight, AlignBottom, buf);
+    /* header right carries only the dwell (or MUTED): band + dwell ran
+     * 82 px wide and started at x=45, under the 60 px title */
+    if(b->muted) {
+        canvas_draw_str_aligned(canvas, 127, 9, AlignRight, AlignBottom, "MUTED");
+    } else {
+        snprintf(buf, sizeof(buf), "%lums", (unsigned long)b->dwell_ms);
+        canvas_draw_str_aligned(canvas, 127, 9, AlignRight, AlignBottom, buf);
+    }
 
     /* ribbon */
     for(uint8_t i = 0; i < BOX_STEPS; i++) {
@@ -163,10 +169,10 @@ static void box_draw(EidolonApp* app, Canvas* canvas) {
     eidolon_fmt_1dp(rb, sizeof(rb), b->rssi_now);
     snprintf(buf, sizeof(buf), "%s MHz  %s dBm", num, rb);
     canvas_draw_str(canvas, 2, 52, buf);
-    canvas_draw_str_aligned(
-        canvas, 127, 52, AlignRight, AlignBottom, b->muted ? "MUTED" : "SWEEP");
 
-    /* word cue */
+    /* bottom line: the word cue when one is spelling or fresh, else
+     * the band and dwell. Baseline 61 - at 63, descenders in words
+     * like "sleep" and "prayer" clipped off the bottom edge. */
     EidolonWords* w = &app->words;
     if(w->spelling || (w->done_tick && furi_get_tick() - w->done_tick < 5000)) {
         canvas_set_font(canvas, FontPrimary);
@@ -175,7 +181,12 @@ static void box_draw(EidolonApp* app, Canvas* canvas) {
         if(n > strlen(w->current)) n = strlen(w->current);
         memcpy(partial, w->current, n);
         partial[n] = '\0';
-        canvas_draw_str_aligned(canvas, 64, 63, AlignCenter, AlignBottom, partial);
+        canvas_draw_str_aligned(canvas, 64, 61, AlignCenter, AlignBottom, partial);
+    } else {
+        canvas_set_font(canvas, FontSecondary);
+        snprintf(
+            buf, sizeof(buf), "BAND %s  %lums", box_bands[b->band].name, (unsigned long)b->dwell_ms);
+        canvas_draw_str_aligned(canvas, 64, 61, AlignCenter, AlignBottom, buf);
     }
 }
 

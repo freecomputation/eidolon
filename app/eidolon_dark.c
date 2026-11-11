@@ -55,6 +55,17 @@ static void dark_tick(EidolonApp* app) {
     }
 }
 
+/* Counters are session uint32s; drawn clamped so the line fits at any
+ * value (unclamped, two full counters ran to 180 px). The log and the
+ * close summary keep the true counts. */
+static void dark_fmt_counter(char* out, size_t size, uint32_t v) {
+    if(v > 99999) {
+        snprintf(out, size, "99999+");
+    } else {
+        snprintf(out, size, "%lu", (unsigned long)v);
+    }
+}
+
 static void dark_draw(EidolonApp* app, Canvas* canvas) {
     DarkState* d = &app->dark;
     char buf[48];
@@ -75,24 +86,30 @@ static void dark_draw(EidolonApp* app, Canvas* canvas) {
         (unsigned long)(d->decoded_count + d->raw_count));
     canvas_draw_str(canvas, 2, 26, buf);
     canvas_set_font(canvas, FontSecondary);
-    snprintf(
-        buf,
-        sizeof(buf),
-        "%lu decoded  %lu raw",
-        (unsigned long)d->decoded_count,
-        (unsigned long)d->raw_count);
+    char dec[12], raw[12];
+    dark_fmt_counter(dec, sizeof(dec), d->decoded_count);
+    dark_fmt_counter(raw, sizeof(raw), d->raw_count);
+    snprintf(buf, sizeof(buf), "DEC %s  RAW %s", dec, raw);
     canvas_draw_str(canvas, 2, 36, buf);
 
     if(d->last_valid) {
         uint32_t age = (furi_get_tick() - d->last_tick) / 1000;
         canvas_draw_str(canvas, 2, 47, d->last_line1);
         canvas_draw_str(canvas, 2, 55, d->last_line2);
-        snprintf(buf, sizeof(buf), "%lus ago", (unsigned long)age);
+        /* age capped short: at full width it started at x=46 and ran
+         * under the command line drawn from x=2 on the same baseline */
+        if(age < 60) {
+            snprintf(buf, sizeof(buf), "%lus", (unsigned long)age);
+        } else if(age < 3600) {
+            snprintf(buf, sizeof(buf), "%lum", (unsigned long)(age / 60));
+        } else {
+            snprintf(buf, sizeof(buf), ">1h");
+        }
         canvas_draw_str_aligned(canvas, 127, 55, AlignRight, AlignBottom, buf);
     } else {
         canvas_draw_str(canvas, 2, 47, "no IR energy seen yet");
     }
-    canvas_draw_str(canvas, 2, 63, "OK: MARK in log");
+    canvas_draw_str(canvas, 2, 61, "OK: MARK in log");
 }
 
 static bool dark_input(EidolonApp* app, InputEvent* event) {

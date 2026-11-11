@@ -156,8 +156,11 @@ static void fusion_draw(EidolonApp* app, Canvas* canvas) {
 
     canvas_set_font(canvas, FontPrimary);
     canvas_draw_str(canvas, 2, 10, "FUSION");
+    /* percent sits beside the title: right-aligned to x=90 it ended
+     * where the state name (right-aligned to 127) begins - "24%" and
+     * "STIRRING" overlapped by 13 px */
     snprintf(buf, sizeof(buf), "%d%%", (int)(f->presence * 100.0f));
-    canvas_draw_str_aligned(canvas, 90, 10, AlignRight, AlignBottom, buf);
+    canvas_draw_str(canvas, 48, 10, buf);
     canvas_draw_str_aligned(canvas, 127, 10, AlignRight, AlignBottom, fusion_state_name(f->presence));
     canvas_set_font(canvas, FontSecondary);
 
@@ -180,14 +183,14 @@ static void fusion_draw(EidolonApp* app, Canvas* canvas) {
     char rb[16];
     eidolon_fmt_1dp(rb, sizeof(rb), f->rf_rssi);
     snprintf(buf, sizeof(buf), "RF %s dBm  JIT %u", rb, f->rem_jitter);
-    canvas_draw_str(canvas, 2, 57, buf);
+    canvas_draw_str(canvas, 2, 54, buf);
     snprintf(
         buf,
         sizeof(buf),
         "IR %lu  FLD %s",
         (unsigned long)app->ir_events_total,
         app->field_present ? "YES" : "no");
-    canvas_draw_str(canvas, 2, 64, buf);
+    canvas_draw_str(canvas, 2, 62, buf); /* was y=64: on the edge row, clipped */
 }
 
 static bool fusion_input(EidolonApp* app, InputEvent* event) {

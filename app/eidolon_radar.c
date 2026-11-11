@@ -143,10 +143,10 @@ static void radar_draw(EidolonApp* app, Canvas* canvas) {
 
     if(furi_get_tick() < r->answer_until) {
         canvas_set_font(canvas, FontPrimary);
-        canvas_draw_str_aligned(canvas, 100, 62, AlignCenter, AlignBottom, r->answer);
+        canvas_draw_str_aligned(canvas, 100, 61, AlignCenter, AlignBottom, r->answer);
         canvas_set_font(canvas, FontSecondary);
     } else {
-        canvas_draw_str(canvas, 74, 62, "OK: YES/NO");
+        canvas_draw_str(canvas, 72, 61, "OK: YES/NO");
     }
 }
 
