@@ -159,7 +159,7 @@ static bool radar_input(EidolonApp* app, InputEvent* event) {
         snprintf(r->answer, sizeof(r->answer), "%s", yes ? "YES" : "NO");
         r->answer_until = furi_get_tick() + 3500;
         eidolon_log_event(app, "RADAR", "question answered: %s (theater)", r->answer);
-        eidolon_beep(app, yes ? 1300.0f : 700.0f, 0.3f, 90);
+        eidolon_cue_answer(app, yes);
         return true;
     }
     return false;

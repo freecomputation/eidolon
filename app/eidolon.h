@@ -8,6 +8,9 @@
 #include <input/input.h>
 #include <storage/storage.h>
 #include <datetime/datetime.h>
+#include <notification/notification.h>
+#include <notification/notification_messages.h>
+#include <notification/notification_messages_notes.h>
 
 #include <math.h>
 #include <stdarg.h>
@@ -226,7 +229,14 @@ struct EidolonApp {
     bool speaker_held;
     bool beep_active;
     uint32_t beep_stop_tick;
+    bool tone_active; /* continuous tone (REM alert) owns the speaker */
     bool mirror_active; /* spirit box owns gpio_speaker */
+
+    /* feedback engine (eidolon_feedback.c) */
+    NotificationApp* notifications;
+    uint32_t fb_last_cue; /* throttle stamp for cue dispatch */
+    bool fb_alert; /* REM alert feedback (blink + vibro) running */
+    uint32_t fb_alert_pulse; /* next alert vibro re-pulse tick */
 
     /* surge feedback */
     uint32_t flash_until;
@@ -253,12 +263,35 @@ struct EidolonApp {
     AboutState about;
 };
 
-/* Core feedback helpers (eidolon.c) */
+/* Core speaker helpers (eidolon.c): continuous / high-rate instrument
+ * audio only (Geiger clicks, REM alert tone, word syllable blips).
+ * Discrete event cues go through the feedback engine below. */
 void eidolon_beep(EidolonApp* app, float freq_hz, float volume, uint32_t duration_ms);
 void eidolon_tone_start(EidolonApp* app, float freq_hz, float volume);
 void eidolon_tone_stop(EidolonApp* app);
-void eidolon_led(EidolonApp* app, uint8_t r, uint8_t g, uint8_t b);
-void eidolon_led_off(EidolonApp* app);
-void eidolon_surge(EidolonApp* app, float level01);
+/* Stop any ringing beep and release the speaker so the notification
+ * service can own it for a cue. No-op while a tone or the mirror owns it. */
+void eidolon_speaker_yield(EidolonApp* app);
 bool eidolon_flash_active(EidolonApp* app);
 float eidolon_activity(EidolonApp* app); /* combined 0..1 */
+
+/* Feedback engine (eidolon_feedback.c): the notification service owns
+ * vibration, the RGB LED and every discrete cue sound. Each event has a
+ * distinct sound / vibro / LED signature. If the speaker is busy (spirit
+ * box mirror or REM tone), the cue falls back to vibro + LED by design -
+ * never to silence. The hold-OK toggle governs cue sound AND vibration;
+ * the LED channel always fires. */
+void eidolon_feedback_init(EidolonApp* app);
+void eidolon_feedback_deinit(EidolonApp* app);
+void eidolon_feedback_tick(EidolonApp* app);
+void eidolon_feedback_all_stop(EidolonApp* app); /* toggle-off cleanup */
+void eidolon_led_off(EidolonApp* app);
+void eidolon_surge(EidolonApp* app, float level01);
+void eidolon_cue_click(EidolonApp* app); /* menu move, source switch */
+void eidolon_cue_confirm(EidolonApp* app); /* OK actions: zero, mark, enter */
+void eidolon_cue_lockon(EidolonApp* app); /* spirit box carrier lock-on */
+void eidolon_cue_cold(EidolonApp* app); /* field meter cold spot */
+void eidolon_cue_word(EidolonApp* app); /* a word finished spelling */
+void eidolon_cue_answer(EidolonApp* app, bool yes); /* radar yes/no */
+void eidolon_alert_feedback_start(EidolonApp* app); /* REM alert: LED blink + vibro */
+void eidolon_alert_feedback_stop(EidolonApp* app);

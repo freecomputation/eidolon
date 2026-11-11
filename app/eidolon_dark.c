@@ -98,7 +98,7 @@ static void dark_draw(EidolonApp* app, Canvas* canvas) {
 static bool dark_input(EidolonApp* app, InputEvent* event) {
     if(event->type == InputTypeRelease && event->key == InputKeyOk) {
         eidolon_log_event(app, "DARK", "manual mark");
-        eidolon_beep(app, 1100.0f, 0.3f, 50);
+        eidolon_cue_confirm(app);
         return true;
     }
     return false;

@@ -108,7 +108,7 @@ static void box_tick(EidolonApp* app) {
                 char rb[16];
                 eidolon_fmt_1dp(rb, sizeof(rb), b->rssi_now);
                 eidolon_log_event(app, "BOX", "lock at %s MHz, RSSI %s dBm", fb, rb);
-                eidolon_surge(app, 0.7f);
+                eidolon_cue_lockon(app);
                 eidolon_words_trigger(app, "BOX");
             }
         }
@@ -204,6 +204,10 @@ static bool box_input(EidolonApp* app, InputEvent* event) {
     if(event->type == InputTypeRelease && event->key == InputKeyOk) {
         b->muted = !b->muted;
         eidolon_radio_mirror(app, !b->muted);
+        /* Muting frees the speaker, so the confirm plays in full.
+         * Unmuting hands the pin to the mirror first, so the confirm
+         * deliberately falls back to vibro + LED. */
+        eidolon_cue_confirm(app);
         eidolon_log_event(app, "BOX", b->muted ? "muted" : "unmuted");
         return true;
     }

@@ -198,7 +198,7 @@ static bool fusion_input(EidolonApp* app, InputEvent* event) {
         f->rf_floor = f->rf_rssi;
         f->temp_start = f->temp_now;
         eidolon_log_event(app, "FUSION", "baselines re-zeroed");
-        eidolon_beep(app, 1200.0f, 0.3f, 60);
+        eidolon_cue_confirm(app);
         return true;
     }
     return false;
