@@ -1,0 +1,10 @@
+App(
+    appid="eidolon",
+    name="Eidolon",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="eidolon_main",
+    requires=["gui"],
+    stack_size=2 * 1024,
+    fap_version="1.0",
+    fap_category="Tools",
+)
