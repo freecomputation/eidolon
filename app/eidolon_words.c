@@ -76,6 +76,7 @@ void eidolon_words_tick(EidolonApp* app) {
     w->history[0][EIDOLON_WORD_MAX - 1] = '\0';
     if(w->history_count < EIDOLON_WORD_HISTORY) w->history_count++;
     eidolon_log_event(app, w->source[0] ? w->source : "VOICE", "word: %s", w->current);
+    eidolon_cue_word(app);
     if(w->pending > 0) {
         w->pending--;
         eidolon_words_trigger(app, w->source);

@@ -20,7 +20,7 @@ static void rem_alert_stop(EidolonApp* app) {
     if(!r->alert) return;
     r->alert = false;
     eidolon_tone_stop(app);
-    eidolon_led_off(app);
+    eidolon_alert_feedback_stop(app);
     eidolon_log_event(app, "REM", "alert end, jitter %u", r->jitter);
 }
 
@@ -45,7 +45,6 @@ static void rem_exit(EidolonApp* app) {
 
 static void rem_tick(EidolonApp* app) {
     RemState* r = &app->rem;
-    uint32_t now = furi_get_tick();
     r->jitter = eidolon_adc_jitter(app, eidolon_adc.ch_pc1, REM_SAMPLES);
 
     if(!r->zeroed) {
@@ -74,22 +73,13 @@ static void rem_tick(EidolonApp* app) {
         eidolon_tone_start(app, freq, (float)r->volume / 10.0f * 0.9f);
         eidolon_log_event(
             app, "REM", "alert: jitter %u over base %u (sens %u)", r->jitter, r->base, r->sensitivity);
-        eidolon_surge(app, 0.6f);
+        eidolon_alert_feedback_start(app);
     } else if(r->alert && !over) {
         rem_alert_stop(app);
     }
 
     if(r->alert) {
         app->activity_rem = 1.0f;
-        /* LED strobe */
-        if(now - r->strobe_tick >= 120) {
-            r->strobe_tick = now;
-            r->strobe_on = !r->strobe_on;
-            if(r->strobe_on)
-                eidolon_led(app, 255, 0, 0);
-            else
-                eidolon_led(app, 0, 0, 0);
-        }
     } else {
         uint16_t thresh_now = rem_threshold(r);
         float frac = 0;
@@ -170,7 +160,7 @@ static bool rem_input(EidolonApp* app, InputEvent* event) {
         r->base = r->jitter;
         r->zeroed = true;
         eidolon_log_event(app, "REM", "re-zeroed, base %u", r->base);
-        eidolon_beep(app, 1200.0f, 0.3f, 60);
+        eidolon_cue_confirm(app);
         return true;
     }
     return false;

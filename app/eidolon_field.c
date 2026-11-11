@@ -97,7 +97,7 @@ static void field_zero(EidolonApp* app) {
     f->hall_zeroed = true;
     f->peak = 0;
     eidolon_log_event(app, "FIELD", "baseline zeroed");
-    eidolon_beep(app, 1200.0f, 0.3f, 60);
+    eidolon_cue_confirm(app);
 }
 
 static void field_set_source(EidolonApp* app, FieldSource source) {
@@ -111,7 +111,7 @@ static void field_set_source(EidolonApp* app, FieldSource source) {
     } else if(source == FieldSrcHall) {
         eidolon_adc_config(app, FuriHalAdcOversampleNone, FuriHalAdcSamplingtime47_5);
     }
-    eidolon_beep(app, 900.0f, 0.25f, 40);
+    eidolon_cue_click(app);
 }
 
 /* ---------------- tick ---------------- */
@@ -200,7 +200,7 @@ static void field_tick(EidolonApp* app) {
             char tb[16];
             eidolon_fmt_1dp(tb, sizeof(tb), drop);
             eidolon_log_event(app, "FIELD", "cold spot: battery temp down %s C", tb);
-            eidolon_surge(app, 0.5f);
+            eidolon_cue_cold(app);
         } else if(drop < 0.3f) {
             f->cold_active = false;
         }

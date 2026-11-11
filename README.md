@@ -73,10 +73,25 @@ the ESP32-S2 dev board is not included; the kit has no dependency on it.
 DESIGN-PARITY.md records how the instrument set was scoped against the
 existing Spectre and Ghost Tracker apps.
 
+## Feedback
+
+Every event class has its own signature through the notification
+service: a composed sound, a vibration pattern and an LED color -
+a rising arpeggio for a spirit-box lock-on, a falling pair for a
+cold spot, a chime when a word completes, a red LED blink with a
+buzz every two seconds while the REM pod alerts, surge feedback
+scaled to event strength. If the speaker is busy - the spirit box
+mirror owns the speaker pin, or the REM alert tone is sounding -
+the cue falls back to vibration and light rather than being
+dropped. Continuous instrument audio stays on the direct speaker
+path: Geiger clicks, the REM alert tone, word syllable blips.
+Hold OK toggles cue sound and vibration together; the LED and the
+screen flash always stay.
+
 ## Controls
 
 - Menu: Up/Down to choose, OK to open, Back to exit the app.
-- Hold OK anywhere: sound on/off.
+- Hold OK anywhere: sound and vibration on/off.
 - Per-instrument controls are listed on each screen and in About.
 
 License: AGPL-3.0.

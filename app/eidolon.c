@@ -44,9 +44,7 @@ static const EidolonMenuEntry eidolon_menu[] = {
 /* Feedback helpers                                                    */
 /* ------------------------------------------------------------------ */
 
-static bool tone_active;
 static uint32_t speaker_idle_since;
-static bool surge_led;
 
 static bool eidolon_speaker_acquire(EidolonApp* app) {
     if(app->speaker_held) return true;
@@ -61,48 +59,36 @@ void eidolon_tone_start(EidolonApp* app, float freq_hz, float volume) {
     if(app->mirror_active) return;
     if(!eidolon_speaker_acquire(app)) return;
     furi_hal_speaker_start(freq_hz, volume);
-    tone_active = true;
+    app->tone_active = true;
     app->beep_active = false;
 }
 
 void eidolon_tone_stop(EidolonApp* app) {
-    UNUSED(app);
-    if(!tone_active) return;
+    if(!app->tone_active) return;
     furi_hal_speaker_stop();
-    tone_active = false;
+    app->tone_active = false;
     speaker_idle_since = furi_get_tick();
 }
 
 void eidolon_beep(EidolonApp* app, float freq_hz, float volume, uint32_t duration_ms) {
-    if(!app->sound_on || app->mirror_active || tone_active) return;
+    if(!app->sound_on || app->mirror_active || app->tone_active) return;
     if(!eidolon_speaker_acquire(app)) return;
     furi_hal_speaker_start(freq_hz, volume);
     app->beep_active = true;
     app->beep_stop_tick = furi_get_tick() + duration_ms;
 }
 
-void eidolon_led(EidolonApp* app, uint8_t r, uint8_t g, uint8_t b) {
-    UNUSED(app);
-    surge_led = false;
-    furi_hal_light_set(LightRed, r);
-    furi_hal_light_set(LightGreen, g);
-    furi_hal_light_set(LightBlue, b);
-}
-
-void eidolon_led_off(EidolonApp* app) {
-    eidolon_led(app, 0, 0, 0);
-}
-
-void eidolon_surge(EidolonApp* app, float level01) {
-    if(level01 < 0) level01 = 0;
-    if(level01 > 1) level01 = 1;
-    app->flash_until = furi_get_tick() + 150 + (uint32_t)(level01 * 250.0f);
-    uint8_t v = (uint8_t)(40.0f + level01 * 215.0f);
-    furi_hal_light_set(LightRed, v / 3);
-    furi_hal_light_set(LightGreen, v);
-    furi_hal_light_set(LightBlue, v);
-    surge_led = true;
-    eidolon_beep(app, 500.0f + level01 * 900.0f, 0.3f, 70);
+void eidolon_speaker_yield(EidolonApp* app) {
+    if(app->mirror_active || app->tone_active) return;
+    if(app->beep_active) {
+        furi_hal_speaker_stop();
+        app->beep_active = false;
+    }
+    if(app->speaker_held) {
+        furi_hal_speaker_release();
+        app->speaker_held = false;
+        speaker_idle_since = furi_get_tick();
+    }
 }
 
 bool eidolon_flash_active(EidolonApp* app) {
@@ -147,16 +133,12 @@ static void eidolon_core_tick(EidolonApp* app) {
         speaker_idle_since = now;
     }
     /* release an idle speaker so system sounds are not starved */
-    if(app->speaker_held && !app->beep_active && !tone_active &&
+    if(app->speaker_held && !app->beep_active && !app->tone_active &&
        now - speaker_idle_since > 800) {
         furi_hal_speaker_release();
         app->speaker_held = false;
     }
-    /* surge LED ends with the flash */
-    if(surge_led && now >= app->flash_until) {
-        surge_led = false;
-        eidolon_led_off(app);
-    }
+    eidolon_feedback_tick(app);
     eidolon_words_tick(app);
 }
 
@@ -190,15 +172,22 @@ static void eidolon_menu_draw(EidolonApp* app, Canvas* canvas) {
 static bool eidolon_menu_input(EidolonApp* app, InputEvent* event) {
     if(event->type == InputTypePress || event->type == InputTypeRepeat) {
         if(event->key == InputKeyDown) {
-            if(app->menu_index + 1 < MENU_COUNT) app->menu_index++;
+            if(app->menu_index + 1 < MENU_COUNT) {
+                app->menu_index++;
+                eidolon_cue_click(app);
+            }
             return true;
         }
         if(event->key == InputKeyUp) {
-            if(app->menu_index > 0) app->menu_index--;
+            if(app->menu_index > 0) {
+                app->menu_index--;
+                eidolon_cue_click(app);
+            }
             return true;
         }
     }
     if(event->type == InputTypeRelease && event->key == InputKeyOk) {
+        eidolon_cue_confirm(app);
         eidolon_enter_screen(app, eidolon_menu[app->menu_index].id);
         return true;
     }
@@ -233,14 +222,16 @@ static void eidolon_input_callback(InputEvent* event, void* context) {
 }
 
 static void eidolon_handle_input(EidolonApp* app, InputEvent* event) {
-    /* hold OK anywhere: global sound toggle */
+    /* hold OK anywhere: global feedback toggle (cue sound + vibration;
+     * the LED channel and the canvas flash always stay) */
     if(event->type == InputTypeLong && event->key == InputKeyOk) {
         app->sound_on = !app->sound_on;
         app->suppress_ok_release = true;
-        eidolon_log_event(app, "APP", "sound %s", app->sound_on ? "on" : "off");
+        eidolon_log_event(app, "APP", "feedback %s", app->sound_on ? "on" : "off");
         if(app->sound_on) {
-            app->beep_active = false;
-            eidolon_beep(app, 1400.0f, 0.3f, 60);
+            eidolon_cue_confirm(app);
+        } else {
+            eidolon_feedback_all_stop(app);
         }
         return;
     }
@@ -281,6 +272,7 @@ int32_t eidolon_main(void* p) {
     app->screen = ScrMenu;
 
     app->storage = furi_record_open(RECORD_STORAGE);
+    eidolon_feedback_init(app);
     eidolon_log_start(app);
     eidolon_words_init(app);
 
@@ -318,6 +310,7 @@ int32_t eidolon_main(void* p) {
     furi_message_queue_free(app->event_queue);
 
     eidolon_log_stop(app);
+    eidolon_feedback_deinit(app);
     furi_record_close(RECORD_STORAGE);
     free(app);
     return 0;
