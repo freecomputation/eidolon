@@ -5,6 +5,6 @@ App(
     entry_point="eidolon_main",
     requires=["gui"],
     stack_size=8 * 1024,
-    fap_version="1.1",
+    fap_version="1.2",
     fap_category="Tools",
 )

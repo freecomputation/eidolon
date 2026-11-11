@@ -112,6 +112,38 @@ typedef struct {
     uint32_t hall_last_tick;
 } FieldState;
 
+#define BOX_STEPS 64
+
+typedef struct {
+    uint8_t band; /* 0: 300-348, 1: 387-464, 2: 779-928 MHz */
+    uint32_t f_start;
+    uint32_t f_stop;
+    uint8_t step;
+    uint32_t dwell_ms;
+    uint32_t step_deadline;
+    bool sampled;
+    float ribbon[BOX_STEPS]; /* RSSI per step, dBm */
+    float floor_dbm;
+    bool floor_valid;
+    float rssi_now;
+    bool muted;
+    int16_t last_above_step;
+    uint8_t lock_hits;
+    uint32_t lock_cooldown_until;
+} BoxState;
+
+typedef struct {
+    uint16_t jitter;
+    uint16_t base;
+    bool zeroed;
+    uint8_t sensitivity; /* 1..10 */
+    uint8_t volume; /* 0..10 */
+    bool alert;
+    uint8_t over_ticks;
+    uint32_t strobe_tick;
+    bool strobe_on;
+} RemState;
+
 typedef struct {
     uint8_t scroll; /* first visible line */
 } AboutState;
@@ -161,6 +193,8 @@ struct EidolonApp {
 
     EidolonWords words;
     FieldState field;
+    BoxState box;
+    RemState rem;
     AboutState about;
 };
 

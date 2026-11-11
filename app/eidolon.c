@@ -1,13 +1,15 @@
 #include "eidolon.h"
 
 extern const EidolonScreen eidolon_screen_field;
+extern const EidolonScreen eidolon_screen_box;
+extern const EidolonScreen eidolon_screen_rem;
 extern const EidolonScreen eidolon_screen_about;
 
 static const EidolonScreen* const eidolon_screens[ScrCount] = {
     [ScrMenu] = NULL,
     [ScrField] = &eidolon_screen_field,
-    [ScrBox] = NULL,
-    [ScrRem] = NULL,
+    [ScrBox] = &eidolon_screen_box,
+    [ScrRem] = &eidolon_screen_rem,
     [ScrDark] = NULL,
     [ScrVoice] = NULL,
     [ScrRadar] = NULL,
@@ -22,6 +24,8 @@ typedef struct {
 
 static const EidolonMenuEntry eidolon_menu[] = {
     {"Field Meter", ScrField},
+    {"Spirit Box", ScrBox},
+    {"REM Pod", ScrRem},
     {"About", ScrAbout},
 };
 
