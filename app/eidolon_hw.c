@@ -5,6 +5,7 @@
 EidolonRadio eidolon_radio;
 EidolonAdc eidolon_adc;
 EidolonFieldDetect eidolon_fd;
+EidolonIr eidolon_ir;
 
 /* ------------------------------------------------------------------ */
 /* Radio                                                               */
@@ -203,4 +204,75 @@ bool eidolon_fd_recent(EidolonApp* app, uint32_t within_ms) {
 
 float eidolon_battery_temp(void) {
     return furi_hal_power_get_battery_temperature(FuriHalPowerICFuelGauge);
+}
+
+/* ------------------------------------------------------------------ */
+/* Infrared watch                                                      */
+/* ------------------------------------------------------------------ */
+
+static void eidolon_ir_callback(void* context, InfraredWorkerSignal* signal) {
+    EidolonApp* app = context;
+    EidolonIrEvent ev;
+    memset(&ev, 0, sizeof(ev));
+    ev.tick = furi_get_tick();
+    if(infrared_worker_signal_is_decoded(signal)) {
+        ev.decoded = true;
+        const InfraredMessage* msg = infrared_worker_get_decoded_signal(signal);
+        if(msg) ev.msg = *msg;
+    } else {
+        const uint32_t* timings = NULL;
+        size_t count = 0;
+        infrared_worker_get_raw_signal(signal, &timings, &count);
+        ev.timings_count = (uint32_t)count;
+    }
+    uint8_t next = (eidolon_ir.head + 1) % EIDOLON_IR_RING;
+    if(next != eidolon_ir.tail) {
+        eidolon_ir.ring[eidolon_ir.head] = ev;
+        eidolon_ir.head = next;
+    }
+    app->ir_events_total++;
+    app->ir_last_tick = ev.tick;
+}
+
+void eidolon_ir_start(EidolonApp* app) {
+    if(eidolon_ir.active) return;
+    memset(&eidolon_ir, 0, sizeof(eidolon_ir));
+    eidolon_ir.worker = infrared_worker_alloc();
+    infrared_worker_rx_set_received_signal_callback(eidolon_ir.worker, eidolon_ir_callback, app);
+    infrared_worker_rx_enable_signal_decoding(eidolon_ir.worker, true);
+    infrared_worker_rx_enable_blink_on_receiving(eidolon_ir.worker, false);
+    infrared_worker_rx_start(eidolon_ir.worker);
+    eidolon_ir.active = true;
+}
+
+void eidolon_ir_stop(EidolonApp* app) {
+    UNUSED(app);
+    if(!eidolon_ir.active) return;
+    infrared_worker_rx_stop(eidolon_ir.worker);
+    infrared_worker_free(eidolon_ir.worker);
+    eidolon_ir.worker = NULL;
+    eidolon_ir.active = false;
+}
+
+bool eidolon_ir_poll(EidolonApp* app, EidolonIrEvent* out) {
+    UNUSED(app);
+    if(eidolon_ir.tail == eidolon_ir.head) return false;
+    *out = eidolon_ir.ring[eidolon_ir.tail];
+    eidolon_ir.tail = (eidolon_ir.tail + 1) % EIDOLON_IR_RING;
+    return true;
+}
+
+void eidolon_ir_log_event(EidolonApp* app, const char* tag, const EidolonIrEvent* ev) {
+    if(ev->decoded) {
+        eidolon_log_event(
+            app,
+            tag,
+            "IR %s addr 0x%lX cmd 0x%lX%s",
+            infrared_get_protocol_name(ev->msg.protocol),
+            (unsigned long)ev->msg.address,
+            (unsigned long)ev->msg.command,
+            ev->msg.repeat ? " (repeat)" : "");
+    } else {
+        eidolon_log_event(app, tag, "IR raw burst, %lu timings", (unsigned long)ev->timings_count);
+    }
 }

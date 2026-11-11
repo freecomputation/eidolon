@@ -64,6 +64,36 @@ bool eidolon_fd_recent(EidolonApp* app, uint32_t within_ms);
 float eidolon_battery_temp(void);
 
 /* ------------------------------------------------------------------ */
+/* Infrared watch (dark watch / fusion)                                */
+/* ------------------------------------------------------------------ */
+
+#define EIDOLON_IR_RING 6
+
+typedef struct {
+    bool decoded;
+    InfraredMessage msg;
+    uint32_t timings_count;
+    uint32_t tick;
+} EidolonIrEvent;
+
+typedef struct {
+    bool active;
+    InfraredWorker* worker;
+    EidolonIrEvent ring[EIDOLON_IR_RING];
+    volatile uint8_t head; /* producer: worker thread */
+    uint8_t tail; /* consumer: main thread */
+} EidolonIr;
+
+extern EidolonIr eidolon_ir;
+
+void eidolon_ir_start(EidolonApp* app);
+void eidolon_ir_stop(EidolonApp* app);
+/* Main-thread drain: returns the next queued event, if any. */
+bool eidolon_ir_poll(EidolonApp* app, EidolonIrEvent* out);
+/* Log one IR event under the given tag. */
+void eidolon_ir_log_event(EidolonApp* app, const char* tag, const EidolonIrEvent* ev);
+
+/* ------------------------------------------------------------------ */
 /* Shared hardware instances (owned by eidolon_hw.c)                   */
 /* ------------------------------------------------------------------ */
 
