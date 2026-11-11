@@ -150,7 +150,8 @@ static void eidolon_menu_draw(EidolonApp* app, Canvas* canvas) {
     canvas_set_font(canvas, FontPrimary);
     canvas_draw_str(canvas, 2, 10, "EIDOLON");
     canvas_set_font(canvas, FontSecondary);
-    canvas_draw_str_aligned(canvas, 127, 9, AlignRight, AlignBottom, app->sound_on ? "SND ON" : "SND OFF");
+    canvas_draw_str_aligned(
+        canvas, 127, 9, AlignRight, AlignBottom, app->sound_on ? "FEEDBACK ON" : "FEEDBACK OFF");
 
     uint8_t offset = 0;
     if(app->menu_index >= MENU_VISIBLE) offset = app->menu_index - MENU_VISIBLE + 1;
@@ -166,7 +167,17 @@ static void eidolon_menu_draw(EidolonApp* app, Canvas* canvas) {
             canvas_draw_str(canvas, 6, y, eidolon_menu[idx].name);
         }
     }
-    canvas_draw_str(canvas, 2, 63, app->last_event);
+    /* last log event, ellipsized against the real font metrics: the raw
+     * text runs to 60 characters (185 px) on a 128 px screen, and its
+     * baseline sat at y=63 where descenders clip */
+    char footer[sizeof(app->last_event)];
+    strncpy(footer, app->last_event, sizeof(footer) - 1);
+    footer[sizeof(footer) - 1] = '\0';
+    size_t flen = strlen(footer);
+    while(flen > 0 && canvas_string_width(canvas, footer) > 124) {
+        footer[--flen] = '\0';
+    }
+    canvas_draw_str(canvas, 2, 61, footer);
 }
 
 static bool eidolon_menu_input(EidolonApp* app, InputEvent* event) {

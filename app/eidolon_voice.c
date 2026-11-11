@@ -51,6 +51,11 @@ static void voice_draw(EidolonApp* app, Canvas* canvas) {
     canvas_draw_str_aligned(
         canvas, 127, 9, AlignRight, AlignBottom, v->asking ? "LISTENING" : "IDLE");
 
+    /* honesty label, right side: on the footer line it started at
+     * x=29 and ran under "OK: ASK" (ends x=36) */
+    canvas_draw_str_aligned(canvas, 127, 47, AlignRight, AlignBottom, "THEATER");
+    canvas_draw_str_aligned(canvas, 127, 56, AlignRight, AlignBottom, "see ABOUT");
+
     /* current word, spelled out letter by letter */
     if(w->spelling || w->current[0]) {
         char partial[EIDOLON_WORD_MAX + 1];
@@ -63,15 +68,15 @@ static void voice_draw(EidolonApp* app, Canvas* canvas) {
         canvas_set_font(canvas, FontSecondary);
     }
 
-    /* last three words */
-    int y = 46;
+    /* last three words; baselines 44/52/60 - the third row sat at 62,
+     * where descenders (p, y in "prayer") clipped at the edge */
+    int y = 44;
     for(uint8_t i = 0; i < w->history_count && i < EIDOLON_WORD_HISTORY; i++) {
         canvas_draw_str(canvas, 10, y, w->history[i]);
         y += 8;
     }
 
-    canvas_draw_str(canvas, 2, 63, "OK: ASK");
-    canvas_draw_str_aligned(canvas, 127, 63, AlignRight, AlignBottom, "THEATER - see ABOUT");
+    canvas_draw_str(canvas, 2, 61, "OK: ASK");
 }
 
 static bool voice_input(EidolonApp* app, InputEvent* event) {

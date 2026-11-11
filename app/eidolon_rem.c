@@ -101,9 +101,14 @@ static void rem_draw(EidolonApp* app, Canvas* canvas) {
     canvas_set_font(canvas, FontSecondary);
     canvas_draw_str_aligned(canvas, 127, 9, AlignRight, AlignBottom, "WIRE PIN 15");
 
+    /* baseline and threshold get their own line: beside JITTER they
+     * ran from x=66 to x=164, off the screen */
+    snprintf(buf, sizeof(buf), "BASE %u  THR %u", r->base, rem_threshold(r));
+    canvas_draw_str(canvas, 2, 22, buf);
+
     if(r->alert) {
         canvas_set_font(canvas, FontPrimary);
-        canvas_draw_str_aligned(canvas, 64, 30, AlignCenter, AlignBottom, "CONTACT");
+        canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignBottom, "CONTACT");
         canvas_set_font(canvas, FontSecondary);
     }
 
@@ -111,8 +116,6 @@ static void rem_draw(EidolonApp* app, Canvas* canvas) {
     canvas_set_font(canvas, FontPrimary);
     canvas_draw_str(canvas, 2, 44, buf);
     canvas_set_font(canvas, FontSecondary);
-    snprintf(buf, sizeof(buf), "BASE %u  THR %u", r->base, rem_threshold(r));
-    canvas_draw_str(canvas, 66, 44, buf);
 
     /* jitter bar against threshold */
     canvas_draw_frame(canvas, 2, 48, 124, 6);
@@ -122,10 +125,12 @@ static void rem_draw(EidolonApp* app, Canvas* canvas) {
     if(fill > 122) fill = 122;
     if(fill > 0) canvas_draw_box(canvas, 3, 49, fill, 4);
     int thr_x = 2 + (int)((uint32_t)rem_threshold(r) * 124 / scale);
-    canvas_draw_line(canvas, thr_x, 47, thr_x, 55);
+    canvas_draw_line(canvas, thr_x, 47, thr_x, 54);
 
-    snprintf(buf, sizeof(buf), "SENS %u (L/R)   VOL %u (U/D)   OK: ZERO", r->sensitivity, r->volume);
-    canvas_draw_str(canvas, 2, 63, buf);
+    /* the old footer was 39 characters / 176 px on a 128 px screen;
+     * the L/R and U/D hints live in About */
+    snprintf(buf, sizeof(buf), "SENS %u  VOL %u  OK: ZERO", r->sensitivity, r->volume);
+    canvas_draw_str(canvas, 2, 62, buf);
 }
 
 static bool rem_input(EidolonApp* app, InputEvent* event) {
