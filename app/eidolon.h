@@ -145,6 +145,57 @@ typedef struct {
 } RemState;
 
 typedef struct {
+    uint32_t decoded_count;
+    uint32_t raw_count;
+    bool last_valid;
+    bool last_decoded;
+    char last_line1[32];
+    char last_line2[32];
+    uint32_t last_tick;
+    uint32_t enter_tick;
+} DarkState;
+
+typedef struct {
+    bool asking;
+    uint32_t answer_at;
+    uint32_t next_auto_tick;
+} VoiceState;
+
+#define RADAR_ECHOES 6
+
+typedef struct {
+    bool active;
+    float angle; /* bearing, degrees */
+    float range; /* 0..100 */
+    float speed; /* range units per second, inward */
+    bool pinged;
+} RadarEcho;
+
+typedef struct {
+    float beam_deg;
+    RadarEcho echoes[RADAR_ECHOES];
+    uint32_t last_tick;
+    char answer[8];
+    uint32_t answer_until;
+} RadarState;
+
+typedef struct {
+    uint8_t radio_step;
+    float rf_rssi;
+    float rf_floor;
+    uint16_t rem_jitter;
+    uint16_t rem_base;
+    bool rem_zeroed;
+    float presence;
+    float peak_presence;
+    uint32_t last_summary_tick;
+    uint32_t last_temp_tick;
+    float temp_start;
+    float temp_now;
+    bool contact;
+} FusionState;
+
+typedef struct {
     uint8_t scroll; /* first visible line */
 } AboutState;
 
@@ -195,6 +246,10 @@ struct EidolonApp {
     FieldState field;
     BoxState box;
     RemState rem;
+    DarkState dark;
+    VoiceState voice;
+    RadarState radar;
+    FusionState fusion;
     AboutState about;
 };
 

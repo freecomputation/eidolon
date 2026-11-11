@@ -3,6 +3,10 @@
 extern const EidolonScreen eidolon_screen_field;
 extern const EidolonScreen eidolon_screen_box;
 extern const EidolonScreen eidolon_screen_rem;
+extern const EidolonScreen eidolon_screen_dark;
+extern const EidolonScreen eidolon_screen_voice;
+extern const EidolonScreen eidolon_screen_radar;
+extern const EidolonScreen eidolon_screen_fusion;
 extern const EidolonScreen eidolon_screen_about;
 
 static const EidolonScreen* const eidolon_screens[ScrCount] = {
@@ -10,10 +14,10 @@ static const EidolonScreen* const eidolon_screens[ScrCount] = {
     [ScrField] = &eidolon_screen_field,
     [ScrBox] = &eidolon_screen_box,
     [ScrRem] = &eidolon_screen_rem,
-    [ScrDark] = NULL,
-    [ScrVoice] = NULL,
-    [ScrRadar] = NULL,
-    [ScrFusion] = NULL,
+    [ScrDark] = &eidolon_screen_dark,
+    [ScrVoice] = &eidolon_screen_voice,
+    [ScrRadar] = &eidolon_screen_radar,
+    [ScrFusion] = &eidolon_screen_fusion,
     [ScrAbout] = &eidolon_screen_about,
 };
 
@@ -26,6 +30,10 @@ static const EidolonMenuEntry eidolon_menu[] = {
     {"Field Meter", ScrField},
     {"Spirit Box", ScrBox},
     {"REM Pod", ScrRem},
+    {"Dark Watch", ScrDark},
+    {"Voice", ScrVoice},
+    {"Radar", ScrRadar},
+    {"Fusion Watch", ScrFusion},
     {"About", ScrAbout},
 };
 
